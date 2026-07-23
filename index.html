@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全球赢必看的新闻资讯</title>
+<style>
+  :root {
+    --bg: #f6f8fb;
+    --bg-card: #ffffff;
+    --border: #e8edf3;
+    --border-strong: #d4dce6;
+    --text: #1a2332;
+    --text-dim: #5a6a7e;
+    --text-faint: #9aa7b8;
+    --c-trade: #0891b2;
+    --c-cross: #d97706;
+    --c-intl: #dc2626;
+    --c-domestic: #7c3aed;
+    --c-green: #16a34a;
+    --shadow: 0 1px 3px rgba(15,40,80,0.06), 0 1px 2px rgba(15,40,80,0.04);
+    --shadow-hover: 0 8px 24px rgba(15,40,80,0.12);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.65;
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--c-trade), #6366f1);
+    display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(8,145,178,0.3);
+  }
+  .brand-text h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
+  .brand-text p { font-size: 12.5px; color: var(--text-faint); letter-spacing: 0.6px; }
+  .status-group { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .status-item { display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--text-dim); }
+  .status-item .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--c-green); box-shadow: 0 0 6px rgba(22,163,74,0.5); animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+  .status-item .val { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  main { max-width: 1300px; margin: 0 auto; padding: 22px 24px 50px; }
+  .section { margin-bottom: 36px; }
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; gap: 10px; flex-wrap: wrap;
+  }
+  .section-title { display: flex; align-items: center; gap: 12px; }
+  .section-title .badge {
+    width: 38px; height: 38px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0;
+  }
+  .badge.trade { background: #ecfeff; border: 1px solid #cffafe; }
+  .badge.cross { background: #fffbeb; border: 1px solid #fef3c7; }
+  .badge.intl { background: #fef2f2; border: 1px solid #fee2e2; }
+  .badge.domestic { background: #f5f3ff; border: 1px solid #ede9fe; }
+  .section-title h2 { font-size: 19px; font-weight: 700; }
+  .section-title .sub { font-size: 12.5px; color: var(--text-faint); margin-top: 1px; }
+  .count-pill {
+    font-size: 13px; color: var(--text-dim);
+    background: #fff; border: 1px solid var(--border);
+    padding: 4px 12px; border-radius: 13px; font-variant-numeric: tabular-nums;
+  }
+  .live-tag {
+    font-size: 11px; color: var(--c-green); font-weight: 700;
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    padding: 2px 8px; border-radius: 10px; letter-spacing: 0.3px;
+  }
+  .grid { display: grid; gap: 12px; }
+  .grid.two-col { grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); }
+  .grid.rank-grid { grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); }
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; transition: all 0.2s ease;
+    overflow: hidden; display: flex; flex-direction: row;
+    box-shadow: var(--shadow); position: relative;
+  }
+  .card:hover { border-color: var(--border-strong); transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+  .card-thumb {
+    width: 110px; min-height: 130px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px; position: relative; overflow: hidden;
+  }
+  .card-thumb::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.25), transparent 60%);
+  }
+  .card-thumb .emoji { position: relative; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); }
+  .thumb-trade { background: linear-gradient(135deg, #0891b2, #065f66); }
+  .thumb-cross { background: linear-gradient(135deg, #d97706, #92560a); }
+  .thumb-intl { background: linear-gradient(135deg, #dc2626, #8b1818); }
+  .thumb-domestic { background: linear-gradient(135deg, #7c3aed, #4c2a96); }
+  .card-body { flex: 1; padding: 13px 16px 12px; display: flex; flex-direction: column; min-width: 0; }
+  .card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
+  .card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .tag { font-size: 11px; padding: 2px 9px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+  .tag-trade { background: #ecfeff; color: var(--c-trade); border: 1px solid #cffafe; }
+  .tag-cross { background: #fffbeb; color: var(--c-cross); border: 1px solid #fef3c7; }
+  .tag-intl { background: #fef2f2; color: var(--c-intl); border: 1px solid #fee2e2; }
+  .tag-domestic { background: #f5f3ff; color: var(--c-domestic); border: 1px solid #ede9fe; }
+  .card-date { font-size: 12.5px; color: var(--text-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .card-title-link { text-decoration: none; color: var(--text); display: block; margin-bottom: 5px; }
+  .card-title-link h3 {
+    font-size: 15.5px; font-weight: 600; line-height: 1.5; color: var(--text);
+    transition: color 0.15s; display: flex; align-items: flex-start; gap: 5px;
+  }
+  .card-title-link:hover h3 { color: var(--c-trade); }
+  .card.cross .card-title-link:hover h3 { color: var(--c-cross); }
+  .card.intl .card-title-link:hover h3 { color: var(--c-intl); }
+  .card.domestic .card-title-link:hover h3 { color: var(--c-domestic); }
+  .card-title-link .ext-icon { font-size: 12px; opacity: 0.3; flex-shrink: 0; margin-top: 3px; transition: opacity 0.15s; }
+  .card-title-link:hover .ext-icon { opacity: 0.8; }
+  .card p { font-size: 13.5px; color: var(--text-dim); line-height: 1.6; }
+  .card-source { margin-top: auto; padding-top: 7px; font-size: 12px; color: var(--text-faint); display: flex; align-items: center; gap: 4px; }
+  .card.intl .rank, .card.domestic .rank {
+    position: absolute; top: 8px; right: 12px;
+    font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; z-index: 2;
+  }
+  .card.intl .rank { color: rgba(220,38,38,0.12); }
+  .card.domestic .rank { color: rgba(124,58,237,0.12); }
+  footer {
+    text-align: center; padding: 26px; color: var(--text-faint);
+    font-size: 12.5px; border-top: 1px solid var(--border);
+  }
+  footer p { margin-bottom: 4px; }
+  @media (max-width: 640px) {
+    .topbar { padding: 11px 14px; }
+    main { padding: 18px 14px 40px; }
+    .grid.two-col, .grid.rank-grid { grid-template-columns: 1fr; }
+    .brand-text h1 { font-size: 16px; }
+    .status-group { gap: 12px; }
+    .card-thumb { width: 80px; min-height: 110px; font-size: 32px; }
+    .card-body { padding: 10px 13px 10px; }
+    .card-title-link h3 { font-size: 14.5px; }
+  }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-icon">🌐</div>
+    <div class="brand-text">
+      <h1>全球赢必看的新闻资讯</h1>
+      <p>Daily Trade Intelligence · 每小时自动更新 · 点击标题查看原文</p>
+    </div>
+  </div>
+  <div class="status-group">
+    <div class="status-item">
+      <span class="dot"></span>
+      <span class="val">更新于 2026-07-23 16:30</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="badge trade">📈</div>
+          <div>
+            <h2>外贸重点资讯 <span class="live-tag">每日更新</span></h2>
+            <div class="sub">关税政策 · 出口管制 · 贸易摩擦 · 行业出海</div>
+          </div>
+        </div>
+        <span class="count-pill">8 条</span>
+      </div>
+      <div class="grid two-col">
+    <article class="card trade">
+      
+      <div class="card-thumb thumb-trade">
+        <span class="emoji">📰</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-trade">资讯</span><span class="tag tag-trade">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494876.html" target="_blank" rel="noopener noreferrer">
+          <h3>我国认证认可检验检测行业发展质量实现整体提升 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社上海6月5日电 题：我国认证认可检验检测行业发展质量实现整体提升 新华社记者赵文君、程思琪 2024年，实施强制性…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card trade">
+      
+      <div class="card-thumb thumb-trade">
+        <span class="emoji">🏛️</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-trade">关税</span><span class="tag tag-trade">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494843.html" target="_blank" rel="noopener noreferrer">
+          <h3>商务部：中方反对美301关税的立场是明确的、一贯的 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>人民网北京6月5日电（记者孙红丽）6月5日，商务部召开例行新闻发布会，介绍近期商务领域重点工作有关情况，并答记者问。 有…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card trade">
+      
+      <div class="card-thumb thumb-trade">
+        <span class="emoji">🏛️</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-trade">关税</span><span class="tag tag-trade">美国</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494835.html" target="_blank" rel="noopener noreferrer">
+          <h3>商务部回应美方提高钢铝关税：将严重扰乱全球产业链供应链稳定 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>人民网北京6月5日电（记者孙红丽）6月5日，商务部召开例行新闻发布会，介绍近期商务领域重点工作有关情况，并答记者问。 有…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card trade">
+      
+      <div class="card-thumb thumb-trade">
+        <span class="emoji">🤖</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-trade">AI</span><span class="tag tag-trade">科技</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494673.html" target="_blank" rel="noopener noreferrer">
+          <h3>防范自动驾驶技术风险 筑牢公共安全防护屏障 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>当前，我国智能驾驶技术正以芯片、传感器和大模型等关键核心技术突破为支点，加速重构交通运输产业生态。辅助驾驶系统凭借自适应…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card trade">
+      
+      <div class="card-thumb thumb-trade">
+        <span class="emoji">📰</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-trade">资讯</span><span class="tag tag-trade">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494647.html" target="_blank" rel="noopener noreferrer">
+          <h3>油烟治理“智净之道”：中国厨电的全球突围 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>厨房作为家庭生活的核心场景，长期存在一个被忽视的“隐形污染源”——厨房油烟。研究表明，厨房油烟的危害不亚于二手烟，长期暴…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card trade">
+      
+      <div class="card-thumb thumb-trade">
+        <span class="emoji">💱</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-trade">科技</span><span class="tag tag-trade">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494467.html" target="_blank" rel="noopener noreferrer">
+          <h3>人民币“国际范儿”愈浓：筑根基、拓场景、广合作 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>从清算网络的“毛细血管”，到实体经济的“神经末梢”，再到金融科技的“前沿阵地”，人民币国际化正以多维立体的方式稳慎扎实推…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card trade">
+      
+      <div class="card-thumb thumb-trade">
+        <span class="emoji">📊</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-trade">数据</span><span class="tag tag-trade">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494485.html" target="_blank" rel="noopener noreferrer">
+          <h3>养老机器人逐浪“夕阳红”新蓝海 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>智能护理臂精准托起老人完成洗漱；健康监测地毯实时捕捉步态数据，提前48小时预警跌倒风险；搭载柔性机械臂的护理床只需一句语…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card trade">
+      
+      <div class="card-thumb thumb-trade">
+        <span class="emoji">🛍️</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-trade">消费</span><span class="tag tag-trade">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494487.html" target="_blank" rel="noopener noreferrer">
+          <h3>3天逾15亿件 小包裹折射消费大市场 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>曾经，古人只能以“飞车跨山鹘横海，风枝露叶如新采”的诗句遐想岭南鲜果的鲜美。如今，现代物流的极速运输网络已让这份遐想触手…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article></div>
+    </section>
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="badge cross">🛒</div>
+          <div>
+            <h2>跨境热点信息 <span class="live-tag">每日更新</span></h2>
+            <div class="sub">平台动态 · 合规监管 · 出海趋势</div>
+          </div>
+        </div>
+        <span class="count-pill">6 条</span>
+      </div>
+      <div class="grid two-col">
+    <article class="card cross">
+      
+      <div class="card-thumb thumb-cross">
+        <span class="emoji">📊</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-cross">数据</span><span class="tag tag-cross">就业</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494850.html" target="_blank" rel="noopener noreferrer">
+          <h3>滴滴程维：将持续发挥稳就业、促消费作用 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>6月5日，滴滴在其官网发布2025年一季度业绩报告，业务持续稳健增长。 报告显示，一季度，包括中国出行和国际业务在内的核…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card cross">
+      
+      <div class="card-thumb thumb-cross">
+        <span class="emoji">🤖</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-cross">AI</span><span class="tag tag-cross">科技</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494673.html" target="_blank" rel="noopener noreferrer">
+          <h3>防范自动驾驶技术风险 筑牢公共安全防护屏障 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>当前，我国智能驾驶技术正以芯片、传感器和大模型等关键核心技术突破为支点，加速重构交通运输产业生态。辅助驾驶系统凭借自适应…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card cross">
+      
+      <div class="card-thumb thumb-cross">
+        <span class="emoji">🤝</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-cross">政策</span><span class="tag tag-cross">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c460498-40494740.html" target="_blank" rel="noopener noreferrer">
+          <h3>处置非法集资部际联席会议发布《关于加强防范非法集资宣传教育工作的意见》 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>全方位加强宣传教育工作是防范非法集资风险的治本之策。国务院发布的《防范和处置非法集资条例》（以下简称《条例》）对加强防范…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card cross">
+      
+      <div class="card-thumb thumb-cross">
+        <span class="emoji">📰</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-cross">资讯</span><span class="tag tag-cross">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c460498-40494699.html" target="_blank" rel="noopener noreferrer">
+          <h3>防范非法金融活动的指南请您查收 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>近年来，非法金融活动形式日益多样化，手段不断翻新，不法分子利用高额回报、快速获利等噱头，吸引公众参与非法集资、网络诈骗、…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card cross">
+      
+      <div class="card-thumb thumb-cross">
+        <span class="emoji">🤖</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-cross">AI</span><span class="tag tag-cross">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494670.html" target="_blank" rel="noopener noreferrer">
+          <h3>完善大语言模型治理体系 守护数智时代网络安全 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>当前，以ChatGPT、DeepSeek为代表的大语言模型（LLM）技术正加速重构全球产业格局。截至2025年，我国生成…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card cross">
+      
+      <div class="card-thumb thumb-cross">
+        <span class="emoji">🤖</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-cross">科技</span><span class="tag tag-cross">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://finance.people.com.cn/n1/2025/0605/c1004-40494675.html" target="_blank" rel="noopener noreferrer">
+          <h3>把稳智能驾驶安全“方向盘” 筑牢物流配送无人车“生命线” <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>在物流行业快速发展的今天，无人配送车正以前所未有的速度重塑城市物流格局。截至今年5月，新石器慧通科技有限公司（以下简称“…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article></div>
+    </section>
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="badge intl">🌍</div>
+          <div>
+            <h2>十大国际新闻 <span class="live-tag">每日更新</span></h2>
+            <div class="sub">全球重大事件 · 地缘政治 · 财经</div>
+          </div>
+        </div>
+        <span class="count-pill">10 条</span>
+      </div>
+      <div class="grid rank-grid">
+    <article class="card intl">
+      <span class="rank">01</span>
+      <div class="card-thumb thumb-intl">
+        <span class="emoji">💱</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-intl">欧盟</span><span class="tag tag-intl">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://world.people.com.cn/n1/2025/0605/c1002-40494895.html" target="_blank" rel="noopener noreferrer">
+          <h3>欧洲央行宣布下调欧元区关键利率 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社快讯：欧洲中央银行5日宣布，将欧元区三大关键利率分别下调25个基点。这是欧洲央行一年内第八次降息。</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card intl">
+      <span class="rank">02</span>
+      <div class="card-thumb thumb-intl">
+        <span class="emoji">🏛️</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-intl">关税</span><span class="tag tag-intl">美国</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://world.people.com.cn/n1/2025/0605/c1002-40494887.html" target="_blank" rel="noopener noreferrer">
+          <h3>美联储“褐皮书”：美国经济不确定性居高位 关税推高物价 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社纽约6月4日电（记者刘亚南）美国联邦储备委员会4日发布的全国经济形势调查报告显示，美国经济和政策的不确定性处于高位…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card intl">
+      <span class="rank">03</span>
+      <div class="card-thumb thumb-intl">
+        <span class="emoji">📰</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-intl">资讯</span><span class="tag tag-intl">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://world.people.com.cn/n1/2025/0605/c1002-40494861.html" target="_blank" rel="noopener noreferrer">
+          <h3>商务部：中方对合规稀土出口许可申请将予以批准 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社北京6月5日电（记者谢希瑶）商务部新闻发言人何咏前在5日举行的例行新闻发布会上答记者问时表示，稀土等相关物项具有明…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card intl">
+      <span class="rank">04</span>
+      <div class="card-thumb thumb-intl">
+        <span class="emoji">🤝</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-intl">外交</span><span class="tag tag-intl">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://world.people.com.cn/n1/2025/0605/c1002-40494859.html" target="_blank" rel="noopener noreferrer">
+          <h3>外交部：中国愿继续与各方一道推动共建清洁、美丽、可持续的世界 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社北京6月5日电（记者袁睿）6月5日是世界环境日。外交部发言人林剑5日表示，中国一直是绿色发展的坚定行动派，也是全球…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card intl">
+      <span class="rank">05</span>
+      <div class="card-thumb thumb-intl">
+        <span class="emoji">🚀</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-intl">航天</span><span class="tag tag-intl">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://world.people.com.cn/n1/2025/0605/c1002-40494817.html" target="_blank" rel="noopener noreferrer">
+          <h3>来自神舟二十号的“太空问候”！中国航天员为世博会中国馆送祝福 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>人民网东京6月5日电 （许可）2025大阪世博会中国馆开馆近两个月，目前已成为世博园内一道亮丽的风景线，吸引了无数参观者…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card intl">
+      <span class="rank">06</span>
+      <div class="card-thumb thumb-intl">
+        <span class="emoji">🤝</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-intl">美国</span><span class="tag tag-intl">外交</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://world.people.com.cn/n1/2025/0605/c1002-40494811.html" target="_blank" rel="noopener noreferrer">
+          <h3>外交部回应美方宣布将对哈佛大学国际学生实行签证限制 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社北京6月5日电（记者袁睿、王慧慧）针对美国日前宣布将对哈佛大学国际学生实行签证限制，外交部发言人林剑5日在例行记者…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card intl">
+      <span class="rank">07</span>
+      <div class="card-thumb thumb-intl">
+        <span class="emoji">🇯🇵</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-intl">资讯</span><span class="tag tag-intl">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://world.people.com.cn/n1/2025/0605/c1002-40494622.html" target="_blank" rel="noopener noreferrer">
+          <h3>中日气候变化问题专家交流会在东京举行 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>6月3日，由日本笹川和平财团笹川日中友好基金主办的中日气候变化问题专家交流会在东京举行。人民网 蒋晓辰摄 人民网东京6月…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card intl">
+      <span class="rank">08</span>
+      <div class="card-thumb thumb-intl">
+        <span class="emoji">📚</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-intl">欧盟</span><span class="tag tag-intl">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://world.people.com.cn/n1/2025/0605/c1002-40494621.html" target="_blank" rel="noopener noreferrer">
+          <h3>法国巴黎西岱大学孔院勇夺第24届“汉语桥”世界大学生中文比赛法国冠军 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>人民网巴黎6月4日电 （记者何蒨） 5月30日至31日，由中国驻法大使馆主办、欧洲时报文化传媒集团承办的第24届“汉语桥…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card intl">
+      <span class="rank">09</span>
+      <div class="card-thumb thumb-intl">
+        <span class="emoji">🤖</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-intl">欧盟</span><span class="tag tag-intl">能源</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://world.people.com.cn/n1/2025/0605/c1002-40494281.html" target="_blank" rel="noopener noreferrer">
+          <h3>远景法国超级工厂投产 中法携手引领绿色能源转型 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>人民网巴黎6月4日电 （记者于超凡）当地时间6月3日，电池科技企业远景动力位于法国杜埃的电池超级工厂正式投产，法国总统马…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card intl">
+      <span class="rank">10</span>
+      <div class="card-thumb thumb-intl">
+        <span class="emoji">📰</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-intl">资讯</span><span class="tag tag-intl">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://world.people.com.cn/n1/2025/0605/c1002-40494292.html" target="_blank" rel="noopener noreferrer">
+          <h3>2025第九届中国（印尼）出口品牌联展暨印尼雅加达国际工业联展开幕 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>人民网雅加达6月4日电（记者李培松）6月4日，2025第九届中国（印尼）出口品牌联展暨印尼雅加达国际工业联展（简称“印尼…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article></div>
+    </section>
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="badge domestic">🇨🇳</div>
+          <div>
+            <h2>国内十大新闻 <span class="live-tag">每日更新</span></h2>
+            <div class="sub">经济政策 · 产业数据 · 社会热点</div>
+          </div>
+        </div>
+        <span class="count-pill">10 条</span>
+      </div>
+      <div class="grid rank-grid">
+    <article class="card domestic">
+      <span class="rank">01</span>
+      <div class="card-thumb thumb-domestic">
+        <span class="emoji">👷</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-domestic">就业</span><span class="tag tag-domestic">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://politics.people.com.cn/n1/2025/0605/c1001-40494898.html" target="_blank" rel="noopener noreferrer">
+          <h3>学习卡丨“人不负青山，青山定不负人” <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>生态环境是关系党的使命宗旨的重大政治问题，也是关系民生的重大社会问题。 习近平总书记多次指出，必须站在中华民族永续发展根…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card domestic">
+      <span class="rank">02</span>
+      <div class="card-thumb thumb-domestic">
+        <span class="emoji">📰</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-domestic">资讯</span><span class="tag tag-domestic">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://politics.people.com.cn/n1/2025/0605/c1001-40494899.html" target="_blank" rel="noopener noreferrer">
+          <h3>镜观·足迹｜呵护千山万水 擘画永续发展 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>大美中国，江山如画。 党的十八大以来，习近平总书记的考察足迹遍及神州大地。祁连山麓、坝上林海，秦岭深处、黄河之滨，总书记…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card domestic">
+      <span class="rank">03</span>
+      <div class="card-thumb thumb-domestic">
+        <span class="emoji">👷</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-domestic">就业</span><span class="tag tag-domestic">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://politics.people.com.cn/n1/2025/0605/c1001-40494900.html" target="_blank" rel="noopener noreferrer">
+          <h3>学习手记 | “环境就是民生” <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>6月5日是世界环境日，也是我国环境保护法确立的环境日。 22年前的这一天，在时任浙江省委书记习近平部署推动下，以农村人居…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card domestic">
+      <span class="rank">04</span>
+      <div class="card-thumb thumb-domestic">
+        <span class="emoji">📰</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-domestic">资讯</span><span class="tag tag-domestic">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://politics.people.com.cn/n1/2025/0605/c1001-40494881.html" target="_blank" rel="noopener noreferrer">
+          <h3>刘国中在安徽调研时强调 全力以赴夺取夏粮丰收 全面打牢秋粮生产基础 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社合肥6月5日电 中共中央政治局委员、国务院副总理刘国中3日至5日到安徽调研“三夏”农业生产工作。他强调，要深入学习…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card domestic">
+      <span class="rank">05</span>
+      <div class="card-thumb thumb-domestic">
+        <span class="emoji">🤝</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-domestic">美国</span><span class="tag tag-domestic">外交</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://politics.people.com.cn/n1/2025/0605/c1001-40494879.html" target="_blank" rel="noopener noreferrer">
+          <h3>韩正会见中美高级别二轨对话美方代表团 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社北京6月5日电 6月5日，国家副主席韩正在北京会见中美高级别二轨对话美方代表团。 韩正表示，中美关系是当今世界最重…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card domestic">
+      <span class="rank">06</span>
+      <div class="card-thumb thumb-domestic">
+        <span class="emoji">📊</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-domestic">数据</span><span class="tag tag-domestic">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://politics.people.com.cn/n1/2025/0605/c1001-40494878.html" target="_blank" rel="noopener noreferrer">
+          <h3>国务院印发《关于开展第四次全国农业普查的通知》 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社北京6月5日电 国务院日前印发《关于开展第四次全国农业普查的通知》（以下简称《通知》）。根据《中华人民共和国统计法…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card domestic">
+      <span class="rank">07</span>
+      <div class="card-thumb thumb-domestic">
+        <span class="emoji">📰</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-domestic">资讯</span><span class="tag tag-domestic">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://politics.people.com.cn/n1/2025/0605/c1024-40494849.html" target="_blank" rel="noopener noreferrer">
+          <h3>中央军委主席习近平签署命令 发布《军事设施建设条例》 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社北京6月5日电 中央军委主席习近平日前签署命令，发布《军事设施建设条例》，自2025年8月1日起施行。 条例深入贯…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card domestic">
+      <span class="rank">08</span>
+      <div class="card-thumb thumb-domestic">
+        <span class="emoji">📋</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-domestic">政策</span><span class="tag tag-domestic">能源</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://politics.people.com.cn/n1/2025/0605/c1024-40494847.html" target="_blank" rel="noopener noreferrer">
+          <h3>丁薛祥在山西调研时强调 守好公平公正“生命线” 确保实现“平安高考”目标 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社太原6月5日电 6月3日至4日，中共中央政治局常委、国务院副总理丁薛祥在山西调研高考组织保障和能源改革发展等工作。…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card domestic">
+      <span class="rank">09</span>
+      <div class="card-thumb thumb-domestic">
+        <span class="emoji">📰</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-domestic">资讯</span><span class="tag tag-domestic">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://politics.people.com.cn/n1/2025/0605/c1001-40494813.html" target="_blank" rel="noopener noreferrer">
+          <h3>中共中央办公厅印发《党组讨论和决定党员处分事项工作程序规定》 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社北京6月5日电 近日，中共中央办公厅印发《党组讨论和决定党员处分事项工作程序规定》，并发出通知，要求各地区各部门认…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article>
+    <article class="card domestic">
+      <span class="rank">10</span>
+      <div class="card-thumb thumb-domestic">
+        <span class="emoji">⚡</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-tags"><span class="tag tag-domestic">能源</span><span class="tag tag-domestic">热点</span></div>
+          <span class="card-date">06-05</span>
+        </div>
+        <a class="card-title-link" href="http://politics.people.com.cn/n1/2025/0605/c1001-40494812.html" target="_blank" rel="noopener noreferrer">
+          <h3>全国人大常委会启动节约能源法执法检查 <span class="ext-icon">↗</span></h3>
+        </a>
+        <p>新华社北京6月5日电 为推动节约能源法全面有效实施，促进更高水平、更高质量做好节能工作，全国人大常委会5日启动节约能源法…</p>
+        <div class="card-source">📎 人民日报</div>
+      </div>
+    </article></div>
+    </section>
+</main>
+
+<footer>
+  <p>数据来源：人民日报 · 中国新闻网 等公开 RSS 源</p>
+  <p>由 GitHub Actions 每小时自动更新 · 点击卡片标题可跳转原文查看详情</p>
+</footer>
+
+</body>
+</html>
