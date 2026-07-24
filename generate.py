@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 全球赢必看的新闻资讯 - 云端版
-1. 抓取 RSS 源获取最新资讯
+1. 通过 Google News RSS 搜索获取最新资讯（多关键词聚合）
 2. 生成静态 HTML 页面（GitHub Pages 托管）
 3. 可选：推送摘要到微信（Server酱）
 """
@@ -11,41 +11,35 @@ import requests
 import os
 import re
 import html
+import time
+from urllib.parse import quote
 from datetime import datetime, timezone, timedelta
 
 # ============================================================
-# RSS 源配置
+# Google News RSS 搜索配置
 # ============================================================
-RSS_FEEDS = {
+# 每个板块用多组关键词搜索，合并去重
+NEWS_QUERIES = {
     'trade': [
-        'http://www.people.com.cn/rss/finance.xml',
-        'https://www.chinanews.com.cn/rss/cj.xml',
+        '关税 贸易战',
+        '海关 进出口 外贸',
+        '出口管制 制裁',
     ],
     'cross': [
-        'http://www.people.com.cn/rss/finance.xml',
-        'https://www.chinanews.com.cn/rss/cj.xml',
+        '跨境电商 TikTok Temu SHEIN',
+        '亚马逊 速卖通 海外仓',
+        '出海 电商平台',
     ],
     'intl': [
-        'http://www.people.com.cn/rss/world.xml',
-        'https://www.chinanews.com.cn/rss/gj.xml',
+        '国际 重大新闻 全球',
+        '世界要闻 地缘政治',
     ],
     'domestic': [
-        'http://www.people.com.cn/rss/politics.xml',
-        'https://www.chinanews.com.cn/rss/gn.xml',
+        '国内 经济政策 社会热点',
+        '国务院 政策 措施',
+        '央行 财政 经济数据',
     ],
 }
-
-# 外贸关键词筛选
-TRADE_KEYWORDS = [
-    '关税', '出口', '进口', '贸易', '海关', '外贸', 'WTO', '反倾销',
-    '出口管制', '制裁', '关税法', '进出口', '自贸', '壁垒', '协定',
-    '关税壁垒', 'shipping', 'freight', '集装箱', '港口',
-]
-CROSS_KEYWORDS = [
-    '跨境', '电商', 'TikTok', 'Temu', 'SHEIN', '亚马逊', 'AliExpress',
-    '速卖通', 'eBay', '海外仓', '直邮', 'B2B', '出海', '平台',
-    '小程序', '直播带货', '独立站', 'Shopee', 'Lazada',
-]
 
 # ============================================================
 # 板块配置
@@ -53,7 +47,7 @@ CROSS_KEYWORDS = [
 SECTIONS = {
     'trade': {
         'title': '外贸重点资讯',
-        'sub': '关税政策 · 出口管制 · 贸易摩擦 · 行业出海',
+        'sub': '关税政策 · 出口管制 · 贸易摩擦 · 海关数据',
         'emoji': '📈',
         'badge': 'trade',
         'thumb': 'thumb-trade',
@@ -91,6 +85,10 @@ SECTIONS = {
         'ranked': True,
         'max': 10,
     },
+}
+
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
 }
 
 
@@ -181,12 +179,26 @@ def extract_tags(title, summary=''):
 
 
 def parse_date(entry):
+    """解析 Google News RSS 的日期字段"""
     try:
         if hasattr(entry, 'published_parsed') and entry.published_parsed:
             dt = datetime(*entry.published_parsed[:6])
             return dt.strftime('%m-%d')
     except:
         pass
+    # 尝试解析字符串格式
+    pub = getattr(entry, 'published', '')
+    if pub:
+        try:
+            # Google News 格式: "Thu, 23 Jul 2026 23:08:00 GMT"
+            for fmt in ['%a, %d %b %Y %H:%M:%S %Z', '%a, %d %b %Y %H:%M:%S %z']:
+                try:
+                    dt = datetime.strptime(pub, fmt)
+                    return dt.strftime('%m-%d')
+                except:
+                    continue
+        except:
+            pass
     return datetime.now(timezone(timedelta(hours=8))).strftime('%m-%d')
 
 
@@ -204,105 +216,132 @@ def truncate_summary(text, max_len=60):
     return text
 
 
-def get_source(link, feed_url):
-    if 'people.com.cn' in link or 'people.com.cn' in feed_url:
+def parse_google_news_title(raw_title):
+    """
+    Google News RSS 标题格式通常是 "实际标题 - 来源名称"
+    分离出标题和来源
+    """
+    # 尝试分离 "标题 - 来源"
+    parts = raw_title.rsplit(' - ', 1)
+    if len(parts) == 2:
+        title = parts[0].strip()
+        source = parts[1].strip()
+        # 来源通常较短（<20字符），如果太长说明可能不是来源
+        if len(source) <= 25:
+            return title, source
+    return raw_title.strip(), ''
+
+
+def get_source(entry, link, parsed_source):
+    """确定新闻来源"""
+    # 优先用从标题分离出来的来源
+    if parsed_source:
+        return parsed_source
+    # 尝试从 feedparser 的 source 字段获取
+    if hasattr(entry, 'source') and hasattr(entry.source, 'title'):
+        return entry.source.title
+    if hasattr(entry, 'source') and isinstance(entry.source, dict):
+        return entry.source.get('title', '')
+    # 从链接推断
+    if 'people.com.cn' in link:
         return '人民日报'
-    if 'chinanews.com' in link or 'chinanews.com' in feed_url:
+    if 'chinanews.com' in link or 'ecns.cn' in link:
         return '中国新闻网'
     if 'customs.gov.cn' in link:
         return '海关总署'
-    if 'xinhua' in link or 'news.cn' in link:
+    if 'xinhuanet' in link or 'news.cn' in link:
         return '新华社'
     if 'cctv.com' in link or 'cctv.cn' in link:
         return '央视新闻'
+    if 'thepaper' in link:
+        return '澎湃新闻'
+    if '36kr' in link:
+        return '36氪'
     if 'caixin' in link:
         return '财新'
+    if 'cls.cn' in link:
+        return '财联社'
     if 'nbd.com' in link:
         return '每日经济新闻'
-    if 'cls.cn' in link or 'caixin' in link:
-        return '财联社'
+    if 'yicai' in link:
+        return '第一财经'
+    if 'huanqiu' in link:
+        return '环球网'
+    if 'guancha' in link:
+        return '观察者网'
+    if 'sina' in link:
+        return '新浪'
+    if '163.com' in link:
+        return '网易'
+    if 'sohu' in link:
+        return '搜狐'
+    if 'qq.com' in link:
+        return '腾讯'
+    if 'ifeng' in link:
+        return '凤凰网'
     return '综合报道'
 
 
 # ============================================================
-# RSS 抓取与分类
+# Google News RSS 抓取
 # ============================================================
-def fetch_rss(url):
-    try:
-        resp = requests.get(url, timeout=15, headers={
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
-        })
-        feed = feedparser.parse(resp.content)
-        print(f"  [{feed_url_short(url)}] fetched {len(feed.entries)} entries")
-        return feed.entries
-    except Exception as e:
-        print(f"  [{feed_url_short(url)}] ERROR: {e}")
-        return []
-
-
-def feed_url_short(url):
-    if 'people.com.cn' in url:
-        if 'finance' in url:
-            return '人民日报·财经'
-        if 'world' in url:
-            return '人民日报·国际'
-        if 'politics' in url:
-            return '人民日报·时政'
-    if 'chinanews.com' in url:
-        if 'cj' in url:
-            return '中新网·财经'
-        if 'gj' in url:
-            return '中新网·国际'
-        if 'gn' in url:
-            return '中新网·国内'
-    return url[:30]
+def fetch_google_news(query, retries=3, delay=3):
+    """通过 Google News RSS 搜索获取新闻"""
+    url = f'https://news.google.com/rss/search?q={quote(query)}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans'
+    
+    for attempt in range(retries):
+        try:
+            resp = requests.get(url, timeout=25, headers=HEADERS)
+            feed = feedparser.parse(resp.content)
+            return feed.entries
+        except Exception as e:
+            print(f"  [尝试 {attempt+1}/{retries}] 查询'{query}' 失败: {str(e)[:60]}")
+            if attempt < retries - 1:
+                time.sleep(delay * (attempt + 1))
+    print(f"  [查询'{query}'] 全部重试失败，跳过")
+    return []
 
 
 def collect_news():
-    print("=== 开始抓取 RSS 源 ===")
+    print("=== 开始抓取 Google News RSS ===")
     result = {}
 
     for section_key, section_config in SECTIONS.items():
         print(f"\n--- 板块: {section_config['title']} ---")
         all_entries = []
-        for url in RSS_FEEDS[section_key]:
-            entries = fetch_rss(url)
-            for entry in entries:
-                entry._feed_url = url
-            all_entries.extend(entries)
+        queries = NEWS_QUERIES.get(section_key, [])
 
-        # 外贸/跨境板块需要按关键词筛选
-        if section_key == 'trade':
-            filtered = []
-            for entry in all_entries:
-                title = entry.get('title', '')
-                summary = entry.get('summary', '')
-                if any(kw in title + summary for kw in TRADE_KEYWORDS):
-                    filtered.append(entry)
-            all_entries = filtered if len(filtered) >= 3 else all_entries
-            print(f"  关键词筛选后: {len(all_entries)} 条")
-        elif section_key == 'cross':
-            filtered = []
-            for entry in all_entries:
-                title = entry.get('title', '')
-                summary = entry.get('summary', '')
-                if any(kw in title + summary for kw in CROSS_KEYWORDS):
-                    filtered.append(entry)
-            all_entries = filtered if len(filtered) >= 2 else all_entries
-            print(f"  关键词筛选后: {len(all_entries)} 条")
+        for i, query in enumerate(queries):
+            print(f"  搜索: {query}")
+            entries = fetch_google_news(query)
+            print(f"    获取 {len(entries)} 条")
+            for entry in entries:
+                entry._query = query
+            all_entries.extend(entries)
+            # 请求间隔，避免 Google 限流
+            if i < len(queries) - 1:
+                time.sleep(3)
 
         # 去重并整理
         seen_titles = set()
         items = []
         for entry in all_entries:
-            title = clean_text(entry.get('title', '')).strip()
+            raw_title = clean_text(entry.get('title', '')).strip()
+            if not raw_title:
+                continue
+            
+            # 分离标题和来源
+            title, parsed_source = parse_google_news_title(raw_title)
             if not title or title in seen_titles:
                 continue
             seen_titles.add(title)
-            summary = truncate_summary(entry.get('summary', entry.get('description', '')))
+
+            # 摘要：优先用 summary，截取
+            raw_summary = entry.get('summary', entry.get('description', ''))
+            summary = truncate_summary(raw_summary) if raw_summary else '点击查看详情'
+            
             link = entry.get('link', '')
-            feed_url = getattr(entry, '_feed_url', '')
-            source = get_source(link, feed_url)
+            source = get_source(entry, link, parsed_source)
 
             items.append({
                 'tags': extract_tags(title, summary),
@@ -315,29 +354,6 @@ def collect_news():
             })
             if len(items) >= section_config['max']:
                 break
-
-        # 如果不够，补充未筛选的条目
-        if len(items) < section_config['max']:
-            for entry in all_entries:
-                title = clean_text(entry.get('title', '')).strip()
-                if not title or title in seen_titles:
-                    continue
-                seen_titles.add(title)
-                summary = truncate_summary(entry.get('summary', entry.get('description', '')))
-                link = entry.get('link', '')
-                feed_url = getattr(entry, '_feed_url', '')
-                source = get_source(link, feed_url)
-                items.append({
-                    'tags': extract_tags(title, summary),
-                    'date': parse_date(entry),
-                    'emoji': get_emoji(title, summary),
-                    'title': title,
-                    'summary': summary,
-                    'source': source,
-                    'url': link,
-                })
-                if len(items) >= section_config['max']:
-                    break
 
         result[section_key] = items
         print(f"  最终: {len(items)} 条")
@@ -594,7 +610,7 @@ def generate_html(news_data, output_path='index.html'):
 </main>
 
 <footer>
-  <p>数据来源：人民日报 · 中国新闻网 等公开 RSS 源</p>
+  <p>数据来源：Google News 聚合 · 财新 / 新华社 / 中新网 / 环球网 / 财联社 等</p>
   <p>由 GitHub Actions 每小时自动更新 · 点击卡片标题可跳转原文查看详情</p>
 </footer>
 
@@ -616,7 +632,7 @@ def push_wechat(news_data):
         print("SCT_KEY not set, skipping push")
         return False
 
-    site_url = os.environ.get('SITE_URL', 'https://global-win-news.github.io/trade-news/')
+    site_url = os.environ.get('SITE_URL', 'https://mo-xiaolong.github.io/trade-news/')
 
     beijing_tz = timezone(timedelta(hours=8))
     now = datetime.now(beijing_tz)
