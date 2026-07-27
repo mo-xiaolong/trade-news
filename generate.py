@@ -19,25 +19,25 @@ from datetime import datetime, timezone, timedelta
 # Google News RSS 搜索配置
 # ============================================================
 # 每个板块用多组关键词搜索，合并去重
+# when:1d = 限制最近1天的新闻，确保当天最新
 NEWS_QUERIES = {
     'trade': [
-        '关税 贸易战',
-        '海关 进出口 外贸',
-        '出口管制 制裁',
-    ],
-    'cross': [
-        '跨境电商 TikTok Temu SHEIN',
-        '亚马逊 速卖通 海外仓',
-        '出海 电商平台',
+        '关税 贸易战 when:1d',
+        '进出口 外贸 海关 when:1d',
+        '出口管制 制裁 when:1d',
+        '出口 贸易 when:1d',
     ],
     'intl': [
-        '国际 重大新闻 全球',
-        '世界要闻 地缘政治',
+        '地缘政治 外交 when:1d',
+        '国际局势 冲突 when:1d',
+        '全球 重大事件 when:1d',
+        '外交部 发言人 when:1d',
     ],
     'domestic': [
-        '国内 经济政策 社会热点',
-        '国务院 政策 措施',
-        '央行 财政 经济数据',
+        '国务院 政策 when:1d',
+        '央行 财政 经济数据 when:1d',
+        '全国 经济 社会 when:1d',
+        '发改委 政策 措施 when:1d',
     ],
 }
 
@@ -54,16 +54,6 @@ SECTIONS = {
         'tag': 'tag-trade',
         'ranked': False,
         'max': 8,
-    },
-    'cross': {
-        'title': '跨境热点信息',
-        'sub': '平台动态 · 合规监管 · 出海趋势',
-        'emoji': '🛒',
-        'badge': 'cross',
-        'thumb': 'thumb-cross',
-        'tag': 'tag-cross',
-        'ranked': False,
-        'max': 6,
     },
     'intl': {
         'title': '十大国际新闻',
@@ -343,6 +333,14 @@ def collect_news():
             link = entry.get('link', '')
             source = get_source(entry, link, parsed_source)
 
+            # 获取排序用的时间戳
+            sort_time = 0
+            try:
+                if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                    sort_time = datetime(*entry.published_parsed[:6]).timestamp()
+            except:
+                pass
+
             items.append({
                 'tags': extract_tags(title, summary),
                 'date': parse_date(entry),
@@ -351,9 +349,16 @@ def collect_news():
                 'summary': summary,
                 'source': source,
                 'url': link,
+                '_sort_time': sort_time,
             })
-            if len(items) >= section_config['max']:
-                break
+
+        # 按发布时间降序排序（最新的在前）
+        items.sort(key=lambda x: x.get('_sort_time', 0), reverse=True)
+        # 清理排序字段
+        for item in items:
+            item.pop('_sort_time', None)
+        # 截取最大条数
+        items = items[:section_config['max']]
 
         result[section_key] = items
         print(f"  最终: {len(items)} 条")
@@ -434,7 +439,7 @@ def generate_html(news_data, output_path='index.html'):
       <div class="grid {grid_class}">{cards_html}</div>
     </section>"""
 
-    sections_html = ''.join(section_html(key) for key in ['trade', 'cross', 'intl', 'domestic'])
+    sections_html = ''.join(section_html(key) for key in ['trade', 'intl', 'domestic'])
 
     full_html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -641,10 +646,6 @@ def push_wechat(news_data):
     md = ''
     md += '## 📈 外贸重点\n'
     for item in news_data.get('trade', []):
-        md += f"- {item['title']}\n"
-
-    md += '\n## 🛒 跨境热点\n'
-    for item in news_data.get('cross', []):
         md += f"- {item['title']}\n"
 
     md += '\n## 🌍 十大国际\n'
